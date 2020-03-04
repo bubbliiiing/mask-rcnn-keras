@@ -1,6 +1,14 @@
 # mask-rcnn-keras
 这是一个mask-rcnn的库，可以用于训练自己的实例分割模型。
 
+# 训练用权重
+这个训练好的权重是基于coco数据集的，可以直接运行用于coco数据集的实例分割。  
+链接: https://pan.baidu.com/s/1tR7D2oqsa9O-9K6SA4YLJA 提取码: 15cj  
+
+# 测试训练用的数据集
+这个数据集是用于分辨图片中的圆形、正方形、三角形的，格式已经经过了处理，可以让大家明白训练集的格式。
+链接: https://pan.baidu.com/s/14dBd1Lbjw0FCnwKryf9taQ 提取码: 9457
+
 # 使用方法
 ## 1、准备数据集
 a、利用labelme标注数据集，注意标注的时候同一个类要用不同的序号，比如画面中存在**两个苹果那么一个苹果的label就是apple1另一个是apple2。**    
