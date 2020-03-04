@@ -1,0 +1,1 @@
+该目录下有三个文件夹，分别是imgs、mask、yaml，用于存放labelme生成的文件。
