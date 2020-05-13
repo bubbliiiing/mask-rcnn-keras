@@ -30,8 +30,10 @@ def log(text, array=None):
 class ShapesConfig(Config):
     NAME = "shapes"
     GPU_COUNT = 1
+    # 应该通过设置IMAGES_PER_GPU来设置BATCH的大小，而不是下面的BATCH_SIZE
+    # 请各位注意哈！
     IMAGES_PER_GPU = 1
-    BATCH_SIZE = 1
+    # BATCH_SIZE = 1
     NUM_CLASSES = 1 + 3
     RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
     IMAGE_MIN_DIM = 512
