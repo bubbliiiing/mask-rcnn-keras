@@ -115,7 +115,10 @@ class MASK_RCNN(object):
             "masks": final_masks,
         }
 
-        visualize.display_instances(image[0], r['rois'], r['masks'], r['class_ids'], 
+        # 想要保存处理后的图片请查询plt保存图片的方法。
+        drawed_image = visualize.display_instances(image[0], r['rois'], r['masks'], r['class_ids'], 
                                     self.class_names, r['scores'])
+        return drawed_image
+        
     def close_session(self):
         self.sess.close()

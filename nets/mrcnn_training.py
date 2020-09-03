@@ -5,139 +5,102 @@ import numpy as np
 import logging
 from utils import utils
 from utils.anchors import compute_backbone_shapes,generate_pyramid_anchors
-############################################################
-#  Loss Functions
-############################################################
 
+#----------------------------------------------------------#
+#   损失函数公式们
+#----------------------------------------------------------#
 def batch_pack_graph(x, counts, num_rows):
-    """Picks different number of values from each row
-    in x depending on the values in counts.
-    """
     outputs = []
     for i in range(num_rows):
         outputs.append(x[i, :counts[i]])
     return tf.concat(outputs, axis=0)
 
 def smooth_l1_loss(y_true, y_pred):
-    """Implements Smooth-L1 loss.
-    y_true and y_pred are typically: [N, 4], but could be any shape.
+    """
+    smmoth_l1 损失函数
     """
     diff = K.abs(y_true - y_pred)
     less_than_one = K.cast(K.less(diff, 1.0), "float32")
     loss = (less_than_one * 0.5 * diff**2) + (1 - less_than_one) * (diff - 0.5)
     return loss
 
-
 def rpn_class_loss_graph(rpn_match, rpn_class_logits):
-    """RPN anchor classifier loss.
-
-    rpn_match: [batch, anchors, 1]. Anchor match type. 1=positive,
-               -1=negative, 0=neutral anchor.
-    rpn_class_logits: [batch, anchors, 2]. RPN classifier logits for BG/FG.
     """
-    # Squeeze last dim to simplify
+    建议框分类损失函数
+    """
+    # 在最后一维度添加一维度
     rpn_match = tf.squeeze(rpn_match, -1)
-    # Get anchor classes. Convert the -1/+1 match to 0/1 values.
+    # 获得正样本
     anchor_class = K.cast(K.equal(rpn_match, 1), tf.int32)
-    # Positive and Negative anchors contribute to the loss,
-    # but neutral anchors (match value = 0) don't.
+    # 获得未被忽略的样本
     indices = tf.where(K.not_equal(rpn_match, 0))
-    # Pick rows that contribute to the loss and filter out the rest.
+    # 获得预测结果和实际结果
     rpn_class_logits = tf.gather_nd(rpn_class_logits, indices)
     anchor_class = tf.gather_nd(anchor_class, indices)
-    # Cross entropy loss
+    # 计算二者之间的交叉熵
     loss = K.sparse_categorical_crossentropy(target=anchor_class,
                                              output=rpn_class_logits,
                                              from_logits=True)
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
     return loss
 
-
 def rpn_bbox_loss_graph(config, target_bbox, rpn_match, rpn_bbox):
-    """Return the RPN bounding box loss graph.
-
-    config: the model config object.
-    target_bbox: [batch, max positive anchors, (dy, dx, log(dh), log(dw))].
-        Uses 0 padding to fill in unsed bbox deltas.
-    rpn_match: [batch, anchors, 1]. Anchor match type. 1=positive,
-               -1=negative, 0=neutral anchor.
-    rpn_bbox: [batch, anchors, (dy, dx, log(dh), log(dw))]
     """
-    # Positive anchors contribute to the loss, but negative and
-    # neutral anchors (match value of 0 or -1) don't.
+    建议框回归损失
+    """
+    # 在最后一维度添加一维度
     rpn_match = K.squeeze(rpn_match, -1)
+
+    # 获得正样本
     indices = tf.where(K.equal(rpn_match, 1))
-
-    # Pick bbox deltas that contribute to the loss
+    # 获得预测结果与实际结果
     rpn_bbox = tf.gather_nd(rpn_bbox, indices)
-
-    # Trim target bounding box deltas to the same length as rpn_bbox.
+    # 将目标边界框修剪为与rpn_bbox相同的长度。
     batch_counts = K.sum(K.cast(K.equal(rpn_match, 1), tf.int32), axis=1)
     target_bbox = batch_pack_graph(target_bbox, batch_counts,
                                    config.IMAGES_PER_GPU)
-
+    # 计算smooth_l1损失函数
     loss = smooth_l1_loss(target_bbox, rpn_bbox)
     
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
     return loss
 
-
 def mrcnn_class_loss_graph(target_class_ids, pred_class_logits,
                            active_class_ids):
-    """Loss for the classifier head of Mask RCNN.
-
-    target_class_ids: [batch, num_rois]. Integer class IDs. Uses zero
-        padding to fill in the array.
-    pred_class_logits: [batch, num_rois, num_classes]
-    active_class_ids: [batch, num_classes]. Has a value of 1 for
-        classes that are in the dataset of the image, and 0
-        for classes that are not in the dataset.
     """
-    # During model building, Keras calls this function with
-    # target_class_ids of type float32. Unclear why. Cast it
-    # to int to get around it.
+    classifier的分类损失函数
+    """
+    # 目标信息
     target_class_ids = tf.cast(target_class_ids, 'int64')
-
-    # Find predictions of classes that are not in the dataset.
+    # 预测信息
     pred_class_ids = tf.argmax(pred_class_logits, axis=2)
-    # TODO: Update this line to work with batch > 1. Right now it assumes all
-    #       images in a batch have the same active_class_ids
     pred_active = tf.gather(active_class_ids[0], pred_class_ids)
-
-    # Loss
+    # 求二者交叉熵损失
     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
         labels=target_class_ids, logits=pred_class_logits)
 
-    # Erase losses of predictions of classes that are not in the active
-    # classes of the image.
+    # 去除无用的损失
     loss = loss * pred_active
 
-    # Computer loss mean. Use only predictions that contribute
-    # to the loss to get a correct mean.
+    # 求平均
     loss = tf.reduce_sum(loss) / tf.reduce_sum(pred_active)
     return loss
 
-
 def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
-    """Loss for Mask R-CNN bounding box refinement.
-
-    target_bbox: [batch, num_rois, (dy, dx, log(dh), log(dw))]
-    target_class_ids: [batch, num_rois]. Integer class IDs.
-    pred_bbox: [batch, num_rois, num_classes, (dy, dx, log(dh), log(dw))]
     """
-    # Reshape to merge batch and roi dimensions for simplicity.
+    classifier的回归损失函数
+    """
+    # Reshape
     target_class_ids = K.reshape(target_class_ids, (-1,))
     target_bbox = K.reshape(target_bbox, (-1, 4))
     pred_bbox = K.reshape(pred_bbox, (-1, K.int_shape(pred_bbox)[2], 4))
 
-    # Only positive ROIs contribute to the loss. And only
-    # the right class_id of each ROI. Get their indices.
+    # 只有属于正样本的建议框用于训练
     positive_roi_ix = tf.where(target_class_ids > 0)[:, 0]
-    positive_roi_class_ids = tf.cast(
-        tf.gather(target_class_ids, positive_roi_ix), tf.int64)
+    positive_roi_class_ids = tf.cast(tf.gather(target_class_ids, positive_roi_ix), tf.int64)
     indices = tf.stack([positive_roi_ix, positive_roi_class_ids], axis=1)
 
-    # Gather the deltas (predicted and true) that contribute to loss
+    # 获得对应预测结果与实际结果
     target_bbox = tf.gather(target_bbox, positive_roi_ix)
     pred_bbox = tf.gather_nd(pred_bbox, indices)
 
@@ -148,38 +111,31 @@ def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
     loss = K.mean(loss)
     return loss
 
-
 def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
-    """Mask binary cross-entropy loss for the masks head.
-
-    target_masks: [batch, num_rois, height, width].
-        A float32 tensor of values 0 or 1. Uses zero padding to fill array.
-    target_class_ids: [batch, num_rois]. Integer class IDs. Zero padded.
-    pred_masks: [batch, proposals, height, width, num_classes] float32 tensor
-                with values from 0 to 1.
     """
-    # Reshape for simplicity. Merge first two dimensions into one.
+    交叉熵损失
+    """
     target_class_ids = K.reshape(target_class_ids, (-1,))
+    # 实际结果
     mask_shape = tf.shape(target_masks)
     target_masks = K.reshape(target_masks, (-1, mask_shape[2], mask_shape[3]))
+
+    # 预测结果
     pred_shape = tf.shape(pred_masks)
-    pred_masks = K.reshape(pred_masks,
-                           (-1, pred_shape[2], pred_shape[3], pred_shape[4]))
-    # Permute predicted masks to [N, num_classes, height, width]
+    pred_masks = K.reshape(pred_masks, (-1, pred_shape[2], pred_shape[3], pred_shape[4]))
+
+    # 进行维度变换 [N, num_classes, height, width]
     pred_masks = tf.transpose(pred_masks, [0, 3, 1, 2])
 
-    # Only positive ROIs contribute to the loss. And only
-    # the class specific mask of each ROI.
+    # 只有正样本有效
     positive_ix = tf.where(target_class_ids > 0)[:, 0]
-    positive_class_ids = tf.cast(
-        tf.gather(target_class_ids, positive_ix), tf.int64)
+    positive_class_ids = tf.cast(tf.gather(target_class_ids, positive_ix), tf.int64)
     indices = tf.stack([positive_ix, positive_class_ids], axis=1)
 
-    # Gather the masks (predicted and true) that contribute to loss
+    # 获得实际结果与预测结果
     y_true = tf.gather(target_masks, positive_ix)
     y_pred = tf.gather_nd(pred_masks, indices)
 
-    # Compute binary cross entropy. If no positive ROIs, then return 0.
     # shape: [batch, roi, num_classes]
     loss = K.switch(tf.size(y_true) > 0,
                     K.binary_crossentropy(target=y_true, output=y_pred),
@@ -187,12 +143,9 @@ def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
     loss = K.mean(loss)
     return loss
 
-
-
-############################################################
-#  Data Generator
-############################################################
-
+#----------------------------------------------------------#
+#   损失函数公式们
+#----------------------------------------------------------#
 def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
                   use_mini_mask=False):
     # 载入图片和语义分割效果
@@ -355,20 +308,17 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                    batch_size=1, detection_targets=False,
                    no_augmentation_sources=None):
     """
-    inputs list:
+    网络输入清单
     - images: [batch, H, W, C]
-    - image_meta: [batch, (meta data)] Image details. See compose_image_meta()
-    - rpn_match: [batch, N] Integer (1=positive anchor, -1=negative, 0=neutral)
-    - rpn_bbox: [batch, N, (dy, dx, log(dh), log(dw))] Anchor bbox deltas.
-    - gt_class_ids: [batch, MAX_GT_INSTANCES] Integer class IDs
+    - image_meta: [batch, (meta data)] 图像详细信息。
+    - rpn_match: [batch, N] 代表建议框的匹配情况 (1=正样本, -1=负样本, 0=中性)
+    - rpn_bbox: [batch, N, (dy, dx, log(dh), log(dw))] 建议框网络应该有的预测结果.
+    - gt_class_ids: [batch, MAX_GT_INSTANCES] 种类ID
     - gt_boxes: [batch, MAX_GT_INSTANCES, (y1, x1, y2, x2)]
-    - gt_masks: [batch, height, width, MAX_GT_INSTANCES]. The height and width
-                are those of the image unless use_mini_mask is True, in which
-                case they are defined in MINI_MASK_SHAPE.
+    - gt_masks: [batch, height, width, MAX_GT_INSTANCES].
 
-    outputs list: Usually empty in regular training. But if detection_targets
-        is True then the outputs list contains target class_ids, bbox deltas,
-        and masks.
+    网络输出清单:
+        在常规训练中通常是空的。
     """
     b = 0  # batch item index
     image_index = -1
@@ -437,7 +387,8 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
             batch_gt_masks = np.zeros(
                 (batch_size, gt_masks.shape[0], gt_masks.shape[1],
                     config.MAX_GT_INSTANCES), dtype=gt_masks.dtype)
-        # Add to batch
+        
+        # 将当前信息加载进batch
         batch_image_meta[b] = image_meta
         batch_rpn_match[b] = rpn_match[:, np.newaxis]
         batch_rpn_bbox[b] = rpn_bbox
@@ -448,15 +399,14 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
 
         b += 1
         
-        # Batch full?
+        # 判断是否已经将batch_size全部载入
         if b >= batch_size:
             inputs = [batch_images, batch_image_meta, batch_rpn_match, batch_rpn_bbox,
                         batch_gt_class_ids, batch_gt_boxes, batch_gt_masks]
             outputs = []
 
             yield inputs, outputs
-
-            # start a new batch
+            # 开始一个新的batch_size
             b = 0
             
 

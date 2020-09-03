@@ -14,9 +14,6 @@ from nets.mrcnn_training import data_generator,load_image_gt
 from dataset import ShapesDataset
 
 def log(text, array=None):
-    """Prints a text message. And, optionally, if a Numpy array is provided it
-    prints it's shape, min, and max values.
-    """
     if array is not None:
         text = text.ljust(25)
         text += ("shape: {:20}  ".format(str(array.shape)))
@@ -31,6 +28,7 @@ class ShapesConfig(Config):
     NAME = "shapes"
     GPU_COUNT = 1
     # 应该通过设置IMAGES_PER_GPU来设置BATCH的大小，而不是下面的BATCH_SIZE
+    # BATCHS_SIZE自动设置为IMAGES_PER_GPU*GPU_COUNT
     # 请各位注意哈！
     IMAGES_PER_GPU = 1
     # BATCH_SIZE = 1
@@ -38,13 +36,13 @@ class ShapesConfig(Config):
     RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
     IMAGE_MIN_DIM = 512
     IMAGE_MAX_DIM = 512
-
-    STEPS_PER_EPOCH = 250
-    VALIDATION_STEPS = 25
+    # 训练集和验证集长度已经自动计算
 
 if __name__ == "__main__":
-    learning_rate = 1e-5
+    freeze_learning_rate = 1e-4
+    unfreeze_learning_rate = 1e-5
     init_epoch = 0
+    freeze_epoch = 50
     epoch = 100
 
     dataset_root_path="./train_dataset/"
@@ -63,6 +61,9 @@ if __name__ == "__main__":
 
     COCO_MODEL_PATH = "model_data/mask_rcnn_coco.h5"
     config = ShapesConfig()
+    # 计算训练集和验证集长度
+    config.STEPS_PER_EPOCH = len(train_imglist)
+    config.VALIDATION_STEPS = len(val_imglist)
     config.display()
 
     # 训练数据集准备
@@ -77,6 +78,7 @@ if __name__ == "__main__":
 
     # 获得训练模型
     model = get_train_model(config)
+    model.summary()
     model.load_weights(COCO_MODEL_PATH,by_name=True,skip_mismatch=True)
 
     # 数据生成器
@@ -94,62 +96,136 @@ if __name__ == "__main__":
                                         verbose=0, save_weights_only=True),
     ]
 
-    log("\nStarting at epoch {}. LR={}\n".format(init_epoch, learning_rate))
-    log("Checkpoint Path: {}".format(MODEL_DIR))
+    freeze_layers = 341
+    for i in range(freeze_layers): 
+        if type(model.layers) is not keras.layers.BatchNormalization:
+            model.layers[i].trainable = False
 
-    # 使用的优化器是
-    optimizer = keras.optimizers.Adam(lr=learning_rate)
+    print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
 
-    # 设置一下loss信息
-    model._losses = []
-    model._per_input_losses = {}
-    loss_names = [
-        "rpn_class_loss",  "rpn_bbox_loss",
-        "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
-    for name in loss_names:
-        layer = model.get_layer(name)
-        if layer.output in model.losses:
-            continue
-        loss = (
-            tf.reduce_mean(layer.output, keepdims=True)
-            * config.LOSS_WEIGHTS.get(name, 1.))
-        model.add_loss(loss)
+    if True:
+        log("\nStarting at epoch {}. LR={}\n".format(init_epoch, freeze_learning_rate))
+        log("Checkpoint Path: {}".format(MODEL_DIR))
 
-    # 增加L2正则化，放置过拟合
-    reg_losses = [
-        keras.regularizers.l2(config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
-        for w in model.trainable_weights
-        if 'gamma' not in w.name and 'beta' not in w.name]
-    model.add_loss(tf.add_n(reg_losses))
+        # 使用的优化器是
+        optimizer = keras.optimizers.Adam(lr=freeze_learning_rate)
 
-    # 进行编译
-    model.compile(
-        optimizer=optimizer,
-        loss=[None] * len(model.outputs)
-    )
+        # 设置一下loss信息
+        model._losses = []
+        model._per_input_losses = {}
+        loss_names = [
+            "rpn_class_loss",  "rpn_bbox_loss",
+            "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
+        for name in loss_names:
+            layer = model.get_layer(name)
+            if layer.output in model.losses:
+                continue
+            loss = (
+                tf.reduce_mean(layer.output, keepdims=True)
+                * config.LOSS_WEIGHTS.get(name, 1.))
+            model.add_loss(loss)
 
-    # 用于显示训练情况
-    for name in loss_names:
-        if name in model.metrics_names:
-            print(name)
-            continue
-        layer = model.get_layer(name)
-        model.metrics_names.append(name)
-        loss = (
-            tf.reduce_mean(layer.output, keepdims=True)
-            * config.LOSS_WEIGHTS.get(name, 1.))
-        model.metrics_tensors.append(loss)
+        # 增加L2正则化，放置过拟合
+        reg_losses = [
+            keras.regularizers.l2(config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
+            for w in model.trainable_weights
+            if 'gamma' not in w.name and 'beta' not in w.name]
+        model.add_loss(tf.add_n(reg_losses))
+
+        # 进行编译
+        model.compile(
+            optimizer=optimizer,
+            loss=[None] * len(model.outputs)
+        )
+
+        # 用于显示训练情况
+        for name in loss_names:
+            if name in model.metrics_names:
+                print(name)
+                continue
+            layer = model.get_layer(name)
+            model.metrics_names.append(name)
+            loss = (
+                tf.reduce_mean(layer.output, keepdims=True)
+                * config.LOSS_WEIGHTS.get(name, 1.))
+            model.metrics_tensors.append(loss)
 
 
-    model.fit_generator(
-        train_generator,
-        initial_epoch=init_epoch,
-        epochs=epoch,
-        steps_per_epoch=config.STEPS_PER_EPOCH,
-        callbacks=callbacks,
-        validation_data=val_generator,
-        validation_steps=config.VALIDATION_STEPS,
-        max_queue_size=100
-    )
+        model.fit_generator(
+            train_generator,
+            initial_epoch=init_epoch,
+            epochs=freeze_epoch,
+            steps_per_epoch=config.STEPS_PER_EPOCH,
+            callbacks=callbacks,
+            validation_data=val_generator,
+            validation_steps=config.VALIDATION_STEPS,
+            max_queue_size=100
+        )
+
+    freeze_layers = 341
+    for i in range(freeze_layers): 
+        if type(model.layers) is not keras.layers.BatchNormalization:
+            model.layers[i].trainable = True
+
+    print('UnFreeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
+
+    if True:
+        log("\nStarting at epoch {}. LR={}\n".format(init_epoch, unfreeze_learning_rate))
+        log("Checkpoint Path: {}".format(MODEL_DIR))
+
+        # 使用的优化器是
+        optimizer = keras.optimizers.Adam(lr=unfreeze_learning_rate)
+
+        # 设置一下loss信息
+        model._losses = []
+        model._per_input_losses = {}
+        loss_names = [
+            "rpn_class_loss",  "rpn_bbox_loss",
+            "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
+        for name in loss_names:
+            layer = model.get_layer(name)
+            if layer.output in model.losses:
+                continue
+            loss = (
+                tf.reduce_mean(layer.output, keepdims=True)
+                * config.LOSS_WEIGHTS.get(name, 1.))
+            model.add_loss(loss)
+
+        # 增加L2正则化，放置过拟合
+        reg_losses = [
+            keras.regularizers.l2(config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
+            for w in model.trainable_weights
+            if 'gamma' not in w.name and 'beta' not in w.name]
+        model.add_loss(tf.add_n(reg_losses))
+
+        # 进行编译
+        model.compile(
+            optimizer=optimizer,
+            loss=[None] * len(model.outputs)
+        )
+
+        # 用于显示训练情况
+        for name in loss_names:
+            if name in model.metrics_names:
+                print(name)
+                continue
+            layer = model.get_layer(name)
+            model.metrics_names.append(name)
+            loss = (
+                tf.reduce_mean(layer.output, keepdims=True)
+                * config.LOSS_WEIGHTS.get(name, 1.))
+            model.metrics_tensors.append(loss)
+
+
+        model.fit_generator(
+            train_generator,
+            initial_epoch=freeze_epoch,
+            epochs=epoch,
+            steps_per_epoch=config.STEPS_PER_EPOCH,
+            callbacks=callbacks,
+            validation_data=val_generator,
+            validation_steps=config.VALIDATION_STEPS,
+            max_queue_size=100
+        )
 
 

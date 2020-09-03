@@ -12,6 +12,7 @@ while True:
         print('Open Error! Try again!')
         continue
     else:
-        mask_rcnn.detect_image(image)
+        image = mask_rcnn.detect_image(image)
+        image.show()
 mask_rcnn.close_session()
     

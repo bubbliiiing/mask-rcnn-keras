@@ -7,7 +7,6 @@ import skimage.transform
 #----------------------------------------------------------#
 #  Dataset
 #----------------------------------------------------------#
-
 class Dataset(object):
     # 数据集训练的基本格式
     def __init__(self, class_map=None):
