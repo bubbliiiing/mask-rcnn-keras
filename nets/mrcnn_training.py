@@ -42,6 +42,7 @@ def rpn_class_loss_graph(rpn_match, rpn_class_logits):
                                              output=rpn_class_logits,
                                              from_logits=True)
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
+    loss = K.switch(tf.math.is_nan(loss), tf.constant([0.0]), loss)
     return loss
 
 def rpn_bbox_loss_graph(config, target_bbox, rpn_match, rpn_bbox):
@@ -63,6 +64,7 @@ def rpn_bbox_loss_graph(config, target_bbox, rpn_match, rpn_bbox):
     loss = smooth_l1_loss(target_bbox, rpn_bbox)
     
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
+    loss = K.switch(tf.math.is_nan(loss), tf.constant([0.0]), loss)
     return loss
 
 def mrcnn_class_loss_graph(target_class_ids, pred_class_logits,
@@ -83,7 +85,7 @@ def mrcnn_class_loss_graph(target_class_ids, pred_class_logits,
     loss = loss * pred_active
 
     # 求平均
-    loss = tf.reduce_sum(loss) / tf.reduce_sum(pred_active)
+    loss = tf.reduce_sum(loss) / tf.maximum(tf.reduce_sum(pred_active), 1)
     return loss
 
 def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
@@ -290,15 +292,14 @@ def build_rpn_targets(image_shape, anchors, gt_class_ids, gt_boxes, config):
         a_center_x = a[1] + 0.5 * a_w
         # 编码运算
         rpn_bbox[ix] = [
-            (gt_center_y - a_center_y) / a_h,
-            (gt_center_x - a_center_x) / a_w,
-            np.log(gt_h / a_h),
-            np.log(gt_w / a_w),
+            (gt_center_y - a_center_y) / np.maximum(a_h, 1),
+            (gt_center_x - a_center_x) / np.maximum(a_w, 1),
+            np.log(np.maximum(gt_h / np.maximum(a_h, 1), 1e-5)),
+            np.log(np.maximum(gt_w / np.maximum(a_w, 1), 1e-5)),
         ]
         # 改变数量级
         rpn_bbox[ix] /= config.RPN_BBOX_STD_DEV
         ix += 1
-
     return rpn_match, rpn_bbox
 
 
