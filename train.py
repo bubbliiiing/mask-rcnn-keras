@@ -39,10 +39,8 @@ class ShapesConfig(Config):
     # 训练集和验证集长度已经自动计算
 
 if __name__ == "__main__":
-    freeze_learning_rate = 1e-4
-    unfreeze_learning_rate = 1e-5
+    learning_rate = 1e-5
     init_epoch = 0
-    freeze_epoch = 50
     epoch = 100
 
     dataset_root_path="./train_dataset/"
@@ -96,19 +94,13 @@ if __name__ == "__main__":
                                         verbose=0, save_weights_only=True),
     ]
 
-    freeze_layers = 341
-    for i in range(freeze_layers): 
-        if type(model.layers) is not keras.layers.BatchNormalization:
-            model.layers[i].trainable = False
-
-    print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
 
     if True:
-        log("\nStarting at epoch {}. LR={}\n".format(init_epoch, freeze_learning_rate))
+        log("\nStarting at epoch {}. LR={}\n".format(init_epoch, learning_rate))
         log("Checkpoint Path: {}".format(MODEL_DIR))
 
         # 使用的优化器是
-        optimizer = keras.optimizers.Adam(lr=freeze_learning_rate)
+        optimizer = keras.optimizers.Adam(lr=learning_rate, clipnorm=config.GRADIENT_CLIP_NORM)
 
         # 设置一下loss信息
         model._losses = []
@@ -124,13 +116,6 @@ if __name__ == "__main__":
                 tf.reduce_mean(layer.output, keepdims=True)
                 * config.LOSS_WEIGHTS.get(name, 1.))
             model.add_loss(loss)
-
-        # 增加L2正则化，放置过拟合
-        reg_losses = [
-            keras.regularizers.l2(config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
-            for w in model.trainable_weights
-            if 'gamma' not in w.name and 'beta' not in w.name]
-        model.add_loss(tf.add_n(reg_losses))
 
         # 进行编译
         model.compile(
@@ -154,72 +139,6 @@ if __name__ == "__main__":
         model.fit_generator(
             train_generator,
             initial_epoch=init_epoch,
-            epochs=freeze_epoch,
-            steps_per_epoch=config.STEPS_PER_EPOCH,
-            callbacks=callbacks,
-            validation_data=val_generator,
-            validation_steps=config.VALIDATION_STEPS,
-            max_queue_size=100
-        )
-
-    freeze_layers = 341
-    for i in range(freeze_layers): 
-        if type(model.layers) is not keras.layers.BatchNormalization:
-            model.layers[i].trainable = True
-
-    print('UnFreeze the first {} layers of total {} layers.'.format(freeze_layers, len(model.layers)))
-
-    if True:
-        log("\nStarting at epoch {}. LR={}\n".format(init_epoch, unfreeze_learning_rate))
-        log("Checkpoint Path: {}".format(MODEL_DIR))
-
-        # 使用的优化器是
-        optimizer = keras.optimizers.Adam(lr=unfreeze_learning_rate)
-
-        # 设置一下loss信息
-        model._losses = []
-        model._per_input_losses = {}
-        loss_names = [
-            "rpn_class_loss",  "rpn_bbox_loss",
-            "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
-        for name in loss_names:
-            layer = model.get_layer(name)
-            if layer.output in model.losses:
-                continue
-            loss = (
-                tf.reduce_mean(layer.output, keepdims=True)
-                * config.LOSS_WEIGHTS.get(name, 1.))
-            model.add_loss(loss)
-
-        # 增加L2正则化，放置过拟合
-        reg_losses = [
-            keras.regularizers.l2(config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
-            for w in model.trainable_weights
-            if 'gamma' not in w.name and 'beta' not in w.name]
-        model.add_loss(tf.add_n(reg_losses))
-
-        # 进行编译
-        model.compile(
-            optimizer=optimizer,
-            loss=[None] * len(model.outputs)
-        )
-
-        # 用于显示训练情况
-        for name in loss_names:
-            if name in model.metrics_names:
-                print(name)
-                continue
-            layer = model.get_layer(name)
-            model.metrics_names.append(name)
-            loss = (
-                tf.reduce_mean(layer.output, keepdims=True)
-                * config.LOSS_WEIGHTS.get(name, 1.))
-            model.metrics_tensors.append(loss)
-
-
-        model.fit_generator(
-            train_generator,
-            initial_epoch=freeze_epoch,
             epochs=epoch,
             steps_per_epoch=config.STEPS_PER_EPOCH,
             callbacks=callbacks,
