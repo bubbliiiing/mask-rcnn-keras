@@ -60,8 +60,8 @@ if __name__ == "__main__":
     COCO_MODEL_PATH = "model_data/mask_rcnn_coco.h5"
     config = ShapesConfig()
     # 计算训练集和验证集长度
-    config.STEPS_PER_EPOCH = len(train_imglist)
-    config.VALIDATION_STEPS = len(val_imglist)
+    config.STEPS_PER_EPOCH = len(train_imglist)//config.IMAGES_PER_GPU
+    config.VALIDATION_STEPS = len(val_imglist)//config.IMAGES_PER_GPU
     config.display()
 
     # 训练数据集准备
