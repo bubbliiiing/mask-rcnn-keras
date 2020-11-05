@@ -33,6 +33,13 @@ class MASK_RCNN(object):
 
     @classmethod
     def get_defaults(cls, n):
+        """
+        Return the default value for the field.
+
+        Args:
+            cls: (callable): write your description
+            n: (dict): write your description
+        """
         if n in cls._defaults:
             return cls._defaults[n]
         else:
@@ -42,6 +49,12 @@ class MASK_RCNN(object):
     #   初始化Mask-Rcnn
     #---------------------------------------------------#
     def __init__(self, **kwargs):
+        """
+        Initialize the configuration.
+
+        Args:
+            self: (todo): write your description
+        """
         self.__dict__.update(self._defaults)
         self.class_names = self._get_class()
         self.sess = K.get_session()
@@ -51,6 +64,12 @@ class MASK_RCNN(object):
     #   获得所有的分类
     #---------------------------------------------------#
     def _get_class(self):
+        """
+        Get class_path and class_path.
+
+        Args:
+            self: (todo): write your description
+        """
         classes_path = os.path.expanduser(self.classes_path)
         with open(classes_path) as f:
             class_names = f.readlines()
@@ -59,6 +78,12 @@ class MASK_RCNN(object):
         return class_names
 
     def _get_config(self):
+        """
+        Get a dictionary of this class configurations.
+
+        Args:
+            self: (todo): write your description
+        """
         class InferenceConfig(Config):
             NUM_CLASSES = len(self.class_names)
             GPU_COUNT = 1
@@ -78,6 +103,12 @@ class MASK_RCNN(object):
     #   生成模型
     #---------------------------------------------------#
     def generate(self):
+        """
+        Generate the weights.
+
+        Args:
+            self: (todo): write your description
+        """
         model_path = os.path.expanduser(self.model_path)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
         
@@ -93,6 +124,13 @@ class MASK_RCNN(object):
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
+        """
+        Detect the image on the image
+
+        Args:
+            self: (todo): write your description
+            image: (array): write your description
+        """
         image = [np.array(image)]
         molded_images, image_metas, windows = mold_inputs(self.config,image)
 
@@ -121,4 +159,10 @@ class MASK_RCNN(object):
         return drawed_image
         
     def close_session(self):
+        """
+        Closes the session.
+
+        Args:
+            self: (todo): write your description
+        """
         self.sess.close()

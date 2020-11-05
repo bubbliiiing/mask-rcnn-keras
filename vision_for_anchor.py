@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 #  Anchors
 #----------------------------------------------------------#
 def generate_anchors(scales, ratios, shape, feature_stride, anchor_stride):
+    """
+    Generate a set of anchors for each shape.
+
+    Args:
+        scales: (str): write your description
+        ratios: (todo): write your description
+        shape: (tuple): write your description
+        feature_stride: (str): write your description
+        anchor_stride: (str): write your description
+    """
     # 获得所有框的长度和比例的组合
     scales, ratios = np.meshgrid(np.array(scales), np.array(ratios))
     scales = scales.flatten()
@@ -73,6 +83,13 @@ def generate_pyramid_anchors(scales, ratios, feature_shapes, feature_strides,
     return np.concatenate(anchors, axis=0)
 
 def compute_backbone_shapes(config, image_shape):
+    """
+    Compute the image shapes.
+
+    Args:
+        config: (todo): write your description
+        image_shape: (int): write your description
+    """
     # 用于计算主干特征提取网络的shape
     if callable(config.BACKBONE):
         return config.COMPUTE_BACKBONE_SHAPE(image_shape)
@@ -84,6 +101,13 @@ def compute_backbone_shapes(config, image_shape):
             for stride in config.BACKBONE_STRIDES])
 
 def get_anchors(config, image_shape):
+    """
+    Generate anchors for image
+
+    Args:
+        config: (todo): write your description
+        image_shape: (tuple): write your description
+    """
     backbone_shapes = compute_backbone_shapes(config, image_shape)
     # print(backbone_shapes)
     anchor_cache = {}

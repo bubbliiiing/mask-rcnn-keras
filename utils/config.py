@@ -126,6 +126,12 @@ class Config(object):
     GRADIENT_CLIP_NORM = 5.0
 
     def __init__(self):
+        """
+        Initialize the gradient
+
+        Args:
+            self: (todo): write your description
+        """
         # 计算BATCH
         self.BATCH_SIZE = self.IMAGES_PER_GPU * self.GPU_COUNT
 
@@ -139,6 +145,12 @@ class Config(object):
         self.IMAGE_META_SIZE = 1 + 3 + 3 + 4 + 1 + self.NUM_CLASSES
 
     def display(self):
+        """
+        Displays the contents of the attributes.
+
+        Args:
+            self: (todo): write your description
+        """
         print("\nConfigurations:")
         for a in dir(self):
             if not a.startswith("__") and not callable(getattr(self, a)):

@@ -14,6 +14,13 @@ from nets.mrcnn_training import data_generator,load_image_gt
 from dataset import ShapesDataset
 
 def log(text, array=None):
+    """
+    Print text to stdout.
+
+    Args:
+        text: (str): write your description
+        array: (array): write your description
+    """
     if array is not None:
         text = text.ljust(25)
         text += ("shape: {:20}  ".format(str(array.shape)))

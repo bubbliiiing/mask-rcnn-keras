@@ -11,6 +11,11 @@ from labelme import utils
 import base64
  
 def main():
+    """
+    Main function.
+
+    Args:
+    """
     count = os.listdir("./before/") 
     index = 0
     for i in range(0, len(count)):
