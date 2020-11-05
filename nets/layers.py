@@ -9,6 +9,13 @@ from utils import utils
 #----------------------------------------------------------#
 
 def apply_box_deltas_graph(boxes, deltas):
+    """
+    Applies box boxes of boxes.
+
+    Args:
+        boxes: (todo): write your description
+        deltas: (todo): write your description
+    """
     # 计算先验框的中心和宽高
     height = boxes[:, 2] - boxes[:, 0]
     width = boxes[:, 3] - boxes[:, 1]
@@ -48,12 +55,28 @@ def clip_boxes_graph(boxes, window):
 class ProposalLayer(Layer):
 
     def __init__(self, proposal_count, nms_threshold, config=None, **kwargs):
+        """
+        Initialize the np. nms.
+
+        Args:
+            self: (todo): write your description
+            proposal_count: (todo): write your description
+            nms_threshold: (float): write your description
+            config: (todo): write your description
+        """
         super(ProposalLayer, self).__init__(**kwargs)
         self.config = config
         self.proposal_count = proposal_count
         self.nms_threshold = nms_threshold
     # [rpn_class, rpn_bbox, anchors]
     def call(self, inputs):
+        """
+        Call the model.
+
+        Args:
+            self: (todo): write your description
+            inputs: (dict): write your description
+        """
 
         # 代表这个先验框内部是否有物体[batch, num_rois, 1]
         scores = inputs[0][:, :, 1]
@@ -102,6 +125,13 @@ class ProposalLayer(Layer):
 
         # 非极大抑制
         def nms(boxes, scores):
+            """
+            Compute the nms scores.
+
+            Args:
+                boxes: (list): write your description
+                scores: (array): write your description
+            """
             indices = tf.image.non_max_suppression(
                 boxes, scores, self.proposal_count,
                 self.nms_threshold, name="rpn_non_max_suppression")
@@ -117,6 +147,13 @@ class ProposalLayer(Layer):
         return proposals
 
     def compute_output_shape(self, input_shape):
+        """
+        Compute the shape.
+
+        Args:
+            self: (todo): write your description
+            input_shape: (list): write your description
+        """
         return (None, self.proposal_count, 4)
 
 
@@ -128,6 +165,12 @@ class ProposalLayer(Layer):
 #----------------------------------------------------------#
 
 def log2_graph(x):
+    """
+    Log2 graph
+
+    Args:
+        x: (todo): write your description
+    """
     return tf.log(x) / tf.log(2.0)
 
 def parse_image_meta_graph(meta):
@@ -151,10 +194,24 @@ def parse_image_meta_graph(meta):
 
 class PyramidROIAlign(Layer):
     def __init__(self, pool_shape, **kwargs):
+        """
+        Initialize the connection pool.
+
+        Args:
+            self: (todo): write your description
+            pool_shape: (todo): write your description
+        """
         super(PyramidROIAlign, self).__init__(**kwargs)
         self.pool_shape = tuple(pool_shape)
 
     def call(self, inputs):
+        """
+        Perform a set of each layer.
+
+        Args:
+            self: (todo): write your description
+            inputs: (dict): write your description
+        """
         # 建议框的位置
         boxes = inputs[0]
 
@@ -228,6 +285,13 @@ class PyramidROIAlign(Layer):
         return pooled
 
     def compute_output_shape(self, input_shape):
+        """
+        Compute the output shape.
+
+        Args:
+            self: (todo): write your description
+            input_shape: (list): write your description
+        """
         return input_shape[0][:2] + self.pool_shape + (input_shape[2][-1], )
 
 
@@ -281,6 +345,12 @@ def refine_detections_graph(rois, probs, deltas, window, config):
     unique_pre_nms_class_ids = tf.unique(pre_nms_class_ids)[0]
 
     def nms_keep_map(class_id):
+        """
+        Keep only keep keep keep_map.
+
+        Args:
+            class_id: (str): write your description
+        """
 
         ixs = tf.where(tf.equal(pre_nms_class_ids, class_id))[:, 0]
 
@@ -330,6 +400,13 @@ def refine_detections_graph(rois, probs, deltas, window, config):
     return detections
 
 def norm_boxes_graph(boxes, shape):
+    """
+    Computes the norm.
+
+    Args:
+        boxes: (list): write your description
+        shape: (int): write your description
+    """
     h, w = tf.split(tf.cast(shape, tf.float32), 2)
     scale = tf.concat([h, w, h, w], axis=-1) - tf.constant(1.0)
     shift = tf.constant([0., 0., 1., 1.])
@@ -338,10 +415,24 @@ def norm_boxes_graph(boxes, shape):
 class DetectionLayer(Layer):
 
     def __init__(self, config=None, **kwargs):
+        """
+        Initialize the configuration.
+
+        Args:
+            self: (todo): write your description
+            config: (todo): write your description
+        """
         super(DetectionLayer, self).__init__(**kwargs)
         self.config = config
 
     def call(self, inputs):
+        """
+        Evaluates the model.
+
+        Args:
+            self: (todo): write your description
+            inputs: (dict): write your description
+        """
         rois = inputs[0]
         mrcnn_class = inputs[1]
         mrcnn_bbox = inputs[2]
@@ -366,6 +457,13 @@ class DetectionLayer(Layer):
             [self.config.BATCH_SIZE, self.config.DETECTION_MAX_INSTANCES, 6])
 
     def compute_output_shape(self, input_shape):
+        """
+        Compute the output shape.
+
+        Args:
+            self: (todo): write your description
+            input_shape: (list): write your description
+        """
         return (None, self.config.DETECTION_MAX_INSTANCES, 6)
 
 
@@ -403,6 +501,16 @@ def overlaps_graph(boxes1, boxes2):
 
 
 def detection_targets_graph(proposals, gt_class_ids, gt_boxes, gt_masks, config):
+    """
+    Computes the dimensions of the tensor.
+
+    Args:
+        proposals: (todo): write your description
+        gt_class_ids: (str): write your description
+        gt_boxes: (todo): write your description
+        gt_masks: (todo): write your description
+        config: (dict): write your description
+    """
     asserts = [
         tf.Assert(tf.greater(tf.shape(proposals)[0], 0), [proposals],
                   name="roi_assertion"),
@@ -545,10 +653,24 @@ class DetectionTargetLayer(Layer):
     """
 
     def __init__(self, config, **kwargs):
+        """
+        Initialize the configuration.
+
+        Args:
+            self: (todo): write your description
+            config: (todo): write your description
+        """
         super(DetectionTargetLayer, self).__init__(**kwargs)
         self.config = config
 
     def call(self, inputs):
+        """
+        Builds the model.
+
+        Args:
+            self: (todo): write your description
+            inputs: (dict): write your description
+        """
         proposals = inputs[0]
         gt_class_ids = inputs[1]
         gt_boxes = inputs[2]
@@ -564,6 +686,13 @@ class DetectionTargetLayer(Layer):
         return outputs
 
     def compute_output_shape(self, input_shape):
+        """
+        Compute output shape.
+
+        Args:
+            self: (todo): write your description
+            input_shape: (list): write your description
+        """
         return [
             (None, self.config.TRAIN_ROIS_PER_IMAGE, 4),  # rois
             (None, self.config.TRAIN_ROIS_PER_IMAGE),  # class_ids
@@ -573,5 +702,13 @@ class DetectionTargetLayer(Layer):
         ]
 
     def compute_mask(self, inputs, mask=None):
+        """
+        Compute the mask.
+
+        Args:
+            self: (todo): write your description
+            inputs: (todo): write your description
+            mask: (array): write your description
+        """
         return [None, None, None, None]
 

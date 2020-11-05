@@ -10,6 +10,14 @@ from utils.anchors import compute_backbone_shapes,generate_pyramid_anchors
 #   损失函数公式们
 #----------------------------------------------------------#
 def batch_pack_graph(x, counts, num_rows):
+    """
+    Concatenate a graph.
+
+    Args:
+        x: (todo): write your description
+        counts: (todo): write your description
+        num_rows: (int): write your description
+    """
     outputs = []
     for i in range(num_rows):
         outputs.append(x[i, :counts[i]])
@@ -150,6 +158,17 @@ def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
 #----------------------------------------------------------#
 def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
                   use_mini_mask=False):
+    """
+    Loads an image.
+
+    Args:
+        dataset: (todo): write your description
+        config: (todo): write your description
+        image_id: (str): write your description
+        augment: (str): write your description
+        augmentation: (todo): write your description
+        use_mini_mask: (bool): write your description
+    """
     # 载入图片和语义分割效果
     image = dataset.load_image(image_id)
     mask, class_ids = dataset.load_mask(image_id)
@@ -218,6 +237,16 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
 
 
 def build_rpn_targets(image_shape, anchors, gt_class_ids, gt_boxes, config):
+    """
+    Builds a set of the rpn
+
+    Args:
+        image_shape: (tuple): write your description
+        anchors: (str): write your description
+        gt_class_ids: (str): write your description
+        gt_boxes: (todo): write your description
+        config: (dict): write your description
+    """
     # 1代表正样本
     # -1代表负样本
     # 0代表忽略

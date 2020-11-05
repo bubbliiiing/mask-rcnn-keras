@@ -3,6 +3,18 @@ from keras.layers import ZeroPadding2D,Conv2D,MaxPooling2D,BatchNormalization,Ac
 
 def identity_block(input_tensor, kernel_size, filters, stage, block,
                    use_bias=True, train_bn=True):
+    """
+    Identifies an identity block.
+
+    Args:
+        input_tensor: (todo): write your description
+        kernel_size: (int): write your description
+        filters: (list): write your description
+        stage: (todo): write your description
+        block: (todo): write your description
+        use_bias: (bool): write your description
+        train_bn: (int): write your description
+    """
     nb_filter1, nb_filter2, nb_filter3 = filters
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
@@ -27,6 +39,19 @@ def identity_block(input_tensor, kernel_size, filters, stage, block,
 
 def conv_block(input_tensor, kernel_size, filters, stage, block,
                strides=(2, 2), use_bias=True, train_bn=True):
+    """
+    Convnet convolutional conv2d.
+
+    Args:
+        input_tensor: (todo): write your description
+        kernel_size: (int): write your description
+        filters: (list): write your description
+        stage: (str): write your description
+        block: (todo): write your description
+        strides: (int): write your description
+        use_bias: (bool): write your description
+        train_bn: (int): write your description
+    """
 
     nb_filter1, nb_filter2, nb_filter3 = filters
     conv_name_base = 'res' + str(stage) + block + '_branch'
@@ -55,6 +80,14 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
     return x
 
 def get_resnet(input_image,stage5=False, train_bn=True):
+    """
+    Get resnet.
+
+    Args:
+        input_image: (str): write your description
+        stage5: (str): write your description
+        train_bn: (bool): write your description
+    """
     # Stage 1
     x = ZeroPadding2D((3, 3))(input_image)
     x = Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)

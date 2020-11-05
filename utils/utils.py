@@ -31,6 +31,12 @@ COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0
 #----------------------------------------------------------#
 
 def extract_bboxes(mask):
+    """
+    Extract all the bounding boxes of the given mask.
+
+    Args:
+        mask: (array): write your description
+    """
     # 利用语义分割的mask找到包围它的框
     boxes = np.zeros([mask.shape[-1], 4], dtype=np.int32)
     for i in range(mask.shape[-1]):
@@ -223,6 +229,16 @@ def box_refinement(box, gt_box):
 
 
 def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square"):
+    """
+    Resize an image.
+
+    Args:
+        image: (array): write your description
+        min_dim: (int): write your description
+        max_dim: (int): write your description
+        min_scale: (float): write your description
+        mode: (str): write your description
+    """
     # 保持原有的image
     image_dtype = image.dtype
     # 初始化参数
@@ -301,6 +317,15 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
 
 
 def resize_mask(mask, scale, padding, crop=None):
+    """
+    Resize a mask.
+
+    Args:
+        mask: (array): write your description
+        scale: (float): write your description
+        padding: (int): write your description
+        crop: (array): write your description
+    """
     # 将mask按照scale放大缩小后
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -351,6 +376,13 @@ def expand_mask(bbox, mini_mask, image_shape):
 
 # TODO: Build and use this function to reduce code duplication
 def mold_mask(mask, config):
+    """
+    Mold mask mask.
+
+    Args:
+        mask: (array): write your description
+        config: (todo): write your description
+    """
     pass
 
 
@@ -673,6 +705,13 @@ def compose_image_meta(image_id, original_image_shape, image_shape,
     return meta
 
 def mold_inputs(config, images):
+    """
+    Mold input images into a list of images.
+
+    Args:
+        config: (todo): write your description
+        images: (list): write your description
+    """
     molded_images = []
     image_metas = []
     windows = []
@@ -704,6 +743,16 @@ def mold_inputs(config, images):
 
 def unmold_detections(detections, mrcnn_mask, original_image_shape,
                         image_shape, window):
+    """
+    Unmold all pixels in the image
+
+    Args:
+        detections: (todo): write your description
+        mrcnn_mask: (int): write your description
+        original_image_shape: (str): write your description
+        image_shape: (int): write your description
+        window: (int): write your description
+    """
     zero_ix = np.where(detections[:, 4] == 0)[0]
     N = zero_ix[0] if zero_ix.shape[0] > 0 else detections.shape[0]
 

@@ -10,10 +10,24 @@ from utils.utils import non_max_suppression
 class ShapesDataset(Dataset):
     #得到该图中有多少个实例（物体）
     def get_obj_index(self, image):
+        """
+        Get the index of an image
+
+        Args:
+            self: (todo): write your description
+            image: (array): write your description
+        """
         n = np.max(image)
         return n
     #解析labelme中得到的yaml文件，从而得到mask每一层对应的实例标签
     def from_yaml_get_class(self,image_id):
+        """
+        Create a class from a yaml file.
+
+        Args:
+            self: (todo): write your description
+            image_id: (str): write your description
+        """
         info=self.image_info[image_id]
         with open(info['yaml_path']) as f:
             temp=yaml.load(f.read(), Loader=yaml.FullLoader)
@@ -22,6 +36,16 @@ class ShapesDataset(Dataset):
         return labels
     #重新写draw_mask
     def draw_mask(self, num_obj, mask, image, image_id):
+        """
+        Draw a mask of an image
+
+        Args:
+            self: (todo): write your description
+            num_obj: (int): write your description
+            mask: (array): write your description
+            image: (todo): write your description
+            image_id: (str): write your description
+        """
         info = self.image_info[image_id]
         for index in range(num_obj):
             for i in range(np.shape(mask)[1]):
@@ -33,6 +57,17 @@ class ShapesDataset(Dataset):
 
     #并在self.image_info信息中添加了path、mask_path 、yaml_path
     def load_shapes(self, count, img_floder, mask_floder, imglist, yaml_floder):
+        """
+        Loads all yaml files.
+
+        Args:
+            self: (todo): write your description
+            count: (int): write your description
+            img_floder: (todo): write your description
+            mask_floder: (todo): write your description
+            imglist: (list): write your description
+            yaml_floder: (todo): write your description
+        """
         self.add_class("shapes", 1, "circle")
         self.add_class("shapes", 2, "square")
         self.add_class("shapes", 3, "triangle")
@@ -46,6 +81,13 @@ class ShapesDataset(Dataset):
                 self.add_image("shapes", image_id=i, path=img_path, mask_path=mask_path,yaml_path=yaml_path)
     #重写load_mask
     def load_mask(self, image_id):
+        """
+        Load mask and mask.
+
+        Args:
+            self: (todo): write your description
+            image_id: (str): write your description
+        """
         info = self.image_info[image_id]
         img = Image.open(info['mask_path'])
         num_obj = self.get_obj_index(img)

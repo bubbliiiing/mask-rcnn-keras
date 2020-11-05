@@ -15,6 +15,13 @@ import numpy as np
 #   RPN当中，获得建议框
 #------------------------------------#
 def rpn_graph(feature_map, anchors_per_location):
+    """
+    Convenience function to an rpn graph.
+
+    Args:
+        feature_map: (bool): write your description
+        anchors_per_location: (todo): write your description
+    """
     
     shared = Conv2D(512, (3, 3), padding='same', activation='relu',
                        name='rpn_conv_shared')(feature_map)
@@ -41,6 +48,13 @@ def rpn_graph(feature_map, anchors_per_location):
 #   RPN模型
 #------------------------------------#
 def build_rpn_model(anchors_per_location, depth):
+    """
+    Builds a model to build a keras graph.
+
+    Args:
+        anchors_per_location: (todo): write your description
+        depth: (int): write your description
+    """
     input_feature_map = Input(shape=[None, None, depth],
                                  name="input_rpn_feature_map")
     outputs = rpn_graph(input_feature_map, anchors_per_location)
@@ -55,6 +69,18 @@ def build_rpn_model(anchors_per_location, depth):
 def fpn_classifier_graph(rois, feature_maps, image_meta,
                          pool_size, num_classes, train_bn=True,
                          fc_layers_size=1024):
+    """
+    Classifier graphifier.
+
+    Args:
+        rois: (todo): write your description
+        feature_maps: (str): write your description
+        image_meta: (str): write your description
+        pool_size: (int): write your description
+        num_classes: (int): write your description
+        train_bn: (int): write your description
+        fc_layers_size: (int): write your description
+    """
     # ROI Pooling，利用建议框在特征层上进行截取
     # Shape: [batch, num_rois, POOL_SIZE, POOL_SIZE, channels]
     x = PyramidROIAlign([pool_size, pool_size],
@@ -98,6 +124,17 @@ def fpn_classifier_graph(rois, feature_maps, image_meta,
 
 def build_fpn_mask_graph(rois, feature_maps, image_meta,
                          pool_size, num_classes, train_bn=True):
+    """
+    Build mask mask.
+
+    Args:
+        rois: (todo): write your description
+        feature_maps: (bool): write your description
+        image_meta: (str): write your description
+        pool_size: (int): write your description
+        num_classes: (int): write your description
+        train_bn: (int): write your description
+    """
     # ROI Pooling，利用建议框在特征层上进行截取
     # Shape: [batch, num_rois, MASK_POOL_SIZE, MASK_POOL_SIZE, channels]
     x = PyramidROIAlign([pool_size, pool_size],
@@ -142,6 +179,12 @@ def build_fpn_mask_graph(rois, feature_maps, image_meta,
 
 
 def get_predict_model(config):
+    """
+    Get a trained model
+
+    Args:
+        config: (todo): write your description
+    """
     h, w = config.IMAGE_SHAPE[:2]
     if h / 2**6 != int(h / 2**6) or w / 2**6 != int(w / 2**6):
         raise Exception("Image size must be dividable by 2 at least 6 times "
@@ -255,6 +298,12 @@ def get_predict_model(config):
     return model
 
 def get_train_model(config):
+    """
+    Get a keras model.
+
+    Args:
+        config: (todo): write your description
+    """
     h, w = config.IMAGE_SHAPE[:2]
     if h / 2**6 != int(h / 2**6) or w / 2**6 != int(w / 2**6):
         raise Exception("Image size must be dividable by 2 at least 6 times "

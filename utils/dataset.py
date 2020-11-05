@@ -10,6 +10,13 @@ import skimage.transform
 class Dataset(object):
     # 数据集训练的基本格式
     def __init__(self, class_map=None):
+        """
+        Initialize the class_class
+
+        Args:
+            self: (todo): write your description
+            class_map: (todo): write your description
+        """
         self._image_ids = []
         self.image_info = []
         # 背景作为第一分类
@@ -17,6 +24,15 @@ class Dataset(object):
         self.source_class_ids = {}
 
     def add_class(self, source, class_id, class_name):
+        """
+        Add a class to the class.
+
+        Args:
+            self: (todo): write your description
+            source: (str): write your description
+            class_id: (str): write your description
+            class_name: (str): write your description
+        """
         assert "." not in source, "Source name cannot contain a dot"
         # 用于增加新的类
         for info in self.class_info:
@@ -29,6 +45,15 @@ class Dataset(object):
         })
 
     def add_image(self, source, image_id, path, **kwargs):
+        """
+        Add an image
+
+        Args:
+            self: (todo): write your description
+            source: (str): write your description
+            image_id: (str): write your description
+            path: (str): write your description
+        """
         # 用于增加用于训练的图片
         image_info = {
             "id": image_id,
@@ -39,9 +64,23 @@ class Dataset(object):
         self.image_info.append(image_info)
 
     def image_reference(self, image_id):
+        """
+        Return the image reference for an image.
+
+        Args:
+            self: (todo): write your description
+            image_id: (int): write your description
+        """
         return ""
 
     def prepare(self, class_map=None):
+        """
+        Prepare the class_map
+
+        Args:
+            self: (todo): write your description
+            class_map: (todo): write your description
+        """
         # 准备数据
         def clean_name(name):
             """Returns a shorter version of object names for cleaner display."""
@@ -93,9 +132,22 @@ class Dataset(object):
 
     @property
     def image_ids(self):
+        """
+        : return : a list of the ids
+
+        Args:
+            self: (todo): write your description
+        """
         return self._image_ids
 
     def source_image_link(self, image_id):
+        """
+        Link image link
+
+        Args:
+            self: (todo): write your description
+            image_id: (str): write your description
+        """
         return self.image_info[image_id]["path"]
 
     def load_image(self, image_id):

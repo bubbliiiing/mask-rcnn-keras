@@ -42,6 +42,23 @@ def display_instances(image, boxes, masks, class_ids, class_names,
                       figsize=(16, 16), 
                       show_mask=True, show_bbox=True,
                       colors=None, captions=None):
+    """
+    Display the instances.
+
+    Args:
+        image: (array): write your description
+        boxes: (list): write your description
+        masks: (array): write your description
+        class_ids: (str): write your description
+        class_names: (str): write your description
+        scores: (todo): write your description
+        title: (str): write your description
+        figsize: (int): write your description
+        show_mask: (bool): write your description
+        show_bbox: (bool): write your description
+        colors: (str): write your description
+        captions: (todo): write your description
+    """
     # instance的数量
     N = boxes.shape[0]
     if not N:
