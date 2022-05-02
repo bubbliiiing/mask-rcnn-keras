@@ -43,11 +43,15 @@ def postprocess(detections, mrcnn_mask, image_shape, input_shape, window):
     #-----------------------------------------#
     box_thre    = detections[:N, :4]
     class_thre  = detections[:N, 5]
-    class_ids   = detections[:N, 4].astype(np.int32) - 1
+    class_ids   = detections[:N, 4].astype(np.int32)
     #-----------------------------------------#
     #   取出分割结果
     #-----------------------------------------#
     masks       = mrcnn_mask[np.arange(N), :, :, class_ids]
+    #-----------------------------------------#
+    #   删掉背景的部分
+    #-----------------------------------------#
+    class_ids   = class_ids - 1
 
     #-----------------------------------------#
     #   获得window框的小数形式

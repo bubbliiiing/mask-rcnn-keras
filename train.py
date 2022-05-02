@@ -20,6 +20,8 @@ from utils.config import Config
 from utils.dataloader import COCODetection
 from utils.utils import get_classes, get_coco_label_map
 
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 if __name__ == "__main__":
     #---------------------------------------------------------------------#
     #   train_gpu       训练用到的GPU
@@ -50,14 +52,16 @@ if __name__ == "__main__":
     #   网络一般不从0开始训练，至少会使用主干部分的权值，有些论文提到可以不用预训练，主要原因是他们 数据集较大 且 调参能力优秀。
     #   如果一定要训练网络的主干部分，可以了解imagenet数据集，首先训练分类模型，分类模型的 主干部分 和该模型通用，基于此进行训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path      = "logs/best_epoch_weights.h5"
-    #------------------------------------------------------#
+    model_path      = "model_data/mask_rcnn_coco.h5"
+    #---------------------------------------------------------------------#
     #   输入的shape大小
-    #------------------------------------------------------#
+    #   算法会填充输入图片到[IMAGE_MAX_DIM, IMAGE_MAX_DIM]的大小
+    #---------------------------------------------------------------------#
     IMAGE_MAX_DIM       = 512
-    #------------------------------------------------------#
-    #   获取先验框大小
-    #------------------------------------------------------#
+    #---------------------------------------------------------------------#
+    #   用于设定先验框大小，默认的先验框大多数情况下是通用的，可以不修改。
+    #   在目标较小时可以设置较小的先验框如[16, 32, 64, 128, 256]
+    #---------------------------------------------------------------------#
     RPN_ANCHOR_SCALES   = [32, 64, 128, 256, 512]
 
     #----------------------------------------------------------------------------------------------------------------------------#
@@ -82,9 +86,9 @@ if __name__ == "__main__":
     #   Epoch           模型总共训练的epoch
     #   batch_size      每次输入的图片数量
     #------------------------------------------------------#
-    Init_Epoch      = 1
+    Init_Epoch      = 0
     Epoch           = 100
-    batch_size      = 1
+    batch_size      = 4
 
     #------------------------------------------------------------------#
     #   其它训练参数：学习率、优化器、学习率下降有关
@@ -182,6 +186,20 @@ if __name__ == "__main__":
     num_train   = len(list(train_coco.imgToAnns.keys()))
     num_val     = len(list(val_coco.imgToAnns.keys()))
 
+    #---------------------------------------------------------#
+    #   总训练世代指的是遍历全部数据的总次数
+    #   总训练步长指的是梯度下降的总次数 
+    #   每个训练世代包含若干训练步长，每个训练步长进行一次梯度下降。
+    #   此处仅建议最低训练世代，上不封顶，计算时只考虑了解冻部分
+    #----------------------------------------------------------#
+    wanted_step = 1.5e4 if optimizer_type == "sgd" else 0.5e4
+    total_step  = num_train // batch_size * Epoch
+    if total_step <= wanted_step:
+        wanted_epoch = wanted_step // (num_train // batch_size) + 1
+        print("\n\033[1;33;44m[Warning] 使用%s优化器时，建议将训练总步长设置到%d以上。\033[0m"%(optimizer_type, wanted_step))
+        print("\033[1;33;44m[Warning] 本次运行的总训练数据量为%d，Unfreeze_batch_size为%d，共训练%d个Epoch，计算出总训练步长为%d。\033[0m"%(num_train, batch_size, Epoch, total_step))
+        print("\033[1;33;44m[Warning] 由于总训练步长为%d，小于建议总步长%d，建议设置总世代为%d。\033[0m"%(total_step, wanted_step, wanted_epoch))
+
     for layer in model.layers:
         if isinstance(layer, DepthwiseConv2D):
             layer.add_loss(l2(weight_decay)(layer.depthwise_kernel))
@@ -198,7 +216,7 @@ if __name__ == "__main__":
         #-------------------------------------------------------------------#
         nbs             = 16
         lr_limit_max    = 1e-4 if optimizer_type == 'adam' else 1e-1
-        lr_limit_min    = 1e-5 if optimizer_type == 'adam' else 5e-4
+        lr_limit_min    = 3e-5 if optimizer_type == 'adam' else 5e-4
         Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
         Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
