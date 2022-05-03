@@ -1,0 +1,1 @@
+数据利用coco_annotation.py处理后的图片文件
