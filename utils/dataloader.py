@@ -248,6 +248,9 @@ class COCODetection(Sequence):
             image, image_meta, gt_class_ids, gt_boxes, gt_masks = \
             load_image_gt(image, mask_gt, boxes, class_ids, image_id, self.config, use_mini_mask=self.config.USE_MINI_MASK)
 
+            if not np.any(gt_class_ids > 0):
+                continue
+        
             # RPN Targets
             rpn_match, rpn_bbox = build_rpn_targets(image.shape, self.anchors, gt_class_ids, gt_boxes, self.config)
         

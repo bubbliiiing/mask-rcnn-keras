@@ -2,6 +2,7 @@ import collections
 import datetime
 import glob
 import json
+import os
 import os.path as osp
 
 import labelme
@@ -10,6 +11,7 @@ import PIL.Image
 import pycocotools.mask
 
 from utils.utils import get_classes
+
 '''
 标注自己的数据集需要注意以下几点：
 1、我使用的labelme版本是3.16.7，建议使用该版本的labelme，
@@ -22,6 +24,9 @@ from utils.utils import get_classes
    triangle_1
    另一个为：  
    triangle_2
+
+   代码同时兼容了MASK RCNN视频中提到的数据标注方式（不能让各位白标注了对吧）
+   标记为triangle1、triangle2也可以正常训练
 '''
 if __name__ == '__main__':
     #------------------------------------#
@@ -48,6 +53,13 @@ if __name__ == '__main__':
     trainval_percent    = 0.9
     train_percent       = 0.9
 
+    #------------------------------------#
+    #   创建文件夹
+    #------------------------------------#
+    if not osp.exists(Img_output_dir):
+        os.makedirs(Img_output_dir)
+    if not osp.exists(Json_output_dir):
+        os.makedirs(Json_output_dir)
     #------------------------------------#
     #   获取当前时间
     #------------------------------------#
@@ -203,12 +215,18 @@ if __name__ == '__main__':
                 segmentations[label].append(points)
 
             for label, mask in masks.items():
-                #------------------------------------#
-                #   利用-进行分割
-                #------------------------------------#
-                cls_name = label.split('_')[0]
-                if cls_name not in class_name_to_id:
-                    continue
+                if '_' in label:
+                    #------------------------------------#
+                    #   利用-进行分割
+                    #------------------------------------#
+                    cls_name = label.split('_')[0]
+                    if cls_name not in class_name_to_id:
+                        continue
+                else:
+                    import re
+                    cls_name = re.split('\d+$', label)[0]
+                    if cls_name not in class_name_to_id:
+                        continue
                 cls_id = class_name_to_id[cls_name]
 
                 #------------------------------------#
