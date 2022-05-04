@@ -49,6 +49,7 @@ def load_image_gt(image, mask, boxes, class_ids, image_id, config, use_mini_mask
     #------------------------------#
     _idx = np.sum(mask, axis=(0, 1)) > 0
     mask        = mask[:, :, _idx]
+    boxes       = boxes[_idx]
     class_ids   = class_ids[_idx]
     
     #------------------------------#
@@ -282,7 +283,7 @@ class COCODetection(Sequence):
             batch_image_meta[i]                             = image_meta
             batch_rpn_match[i]                              = rpn_match[:, np.newaxis]
             batch_rpn_bbox[i]                               = rpn_bbox
-            batch_images[i]                                 = image.astype(np.float32)
+            batch_images[i]                                 = preprocess_input(image.astype(np.float32))
             batch_gt_class_ids[i, :gt_class_ids.shape[0]]   = gt_class_ids
             batch_gt_boxes[i, :gt_boxes.shape[0]]           = gt_boxes
             batch_gt_masks[i, :, :, :gt_masks.shape[-1]]    = gt_masks
@@ -340,12 +341,11 @@ class COCODetection(Sequence):
                 if num_crowds > 0:
                     labels[-num_crowds:] = -1
                 boxes       = np.concatenate([boxes, np.expand_dims(labels, axis=1)], -1)
-                
-        image               = preprocess_input(image)
+        
         masks               = np.transpose(masks, [1, 2, 0])
         outboxes            = np.zeros_like(boxes)
-        outboxes[:, [0, 2]] = boxes[:, [1, 3]] * width
-        outboxes[:, [1, 3]] = boxes[:, [0, 2]] * height
+        outboxes[:, [0, 2]] = boxes[:, [1, 3]] * self.config.IMAGE_SHAPE[0]
+        outboxes[:, [1, 3]] = boxes[:, [0, 2]] * self.config.IMAGE_SHAPE[1]
         outboxes[:, -1]     = boxes[:, -1]
         outboxes            = np.array(outboxes, np.int)
         return image, outboxes, masks, num_crowds, image_id
