@@ -2,7 +2,7 @@
 ---
 
 ### 目录
-1. [注意事项！ Attention](#注意事项！)
+1. [注意事项 Attention](#注意事项)
 2. [仓库更新 Top News](#仓库更新)
 3. [相关仓库 Related code](#相关仓库)
 4. [所需环境 Environment](#所需环境)
