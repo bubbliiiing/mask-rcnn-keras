@@ -50,6 +50,7 @@ def rpn_class_loss_graph(rpn_match, rpn_class_logits):
     loss = K.sparse_categorical_crossentropy(target=anchor_class, output=rpn_class_logits, from_logits=True)
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
     loss = K.switch(tf.math.is_nan(loss), tf.constant([0.0]), loss)
+    loss = K.mean(loss)
     return loss
 
 def rpn_bbox_loss_graph(config, target_bbox, rpn_match, rpn_bbox):
@@ -75,6 +76,7 @@ def rpn_bbox_loss_graph(config, target_bbox, rpn_match, rpn_bbox):
     
     loss = K.switch(tf.size(loss) > 0, K.mean(loss), tf.constant(0.0))
     loss = K.switch(tf.math.is_nan(loss), tf.constant([0.0]), loss)
+    loss = K.mean(loss)
     return loss
 
 def mrcnn_class_loss_graph(target_class_ids, pred_class_logits,

@@ -7,10 +7,9 @@ from keras.callbacks import (EarlyStopping, LearningRateScheduler,
 from keras.layers import Conv2D, Dense, DepthwiseConv2D, PReLU
 from keras.optimizers import SGD, Adam
 from keras.regularizers import l2
-from keras.utils.multi_gpu_utils import multi_gpu_model
 from pycocotools.coco import COCO
 
-from nets.mrcnn import get_train_model
+from nets.mrcnn import ParallelModel, get_train_model
 from nets.mrcnn_training import get_lr_scheduler
 from utils.anchors import compute_backbone_shapes, generate_pyramid_anchors
 from utils.augmentations import Augmentation
@@ -65,9 +64,6 @@ if __name__ == "__main__":
     RPN_ANCHOR_SCALES   = [32, 64, 128, 256, 512]
 
     #----------------------------------------------------------------------------------------------------------------------------#
-    #   显存不足与数据集大小无关，提示显存不足请调小batch_size。
-    #   受到BatchNorm层影响，不能为1。
-    #
     #   在此提供若干参数设置建议，各位训练者根据自己的需求进行灵活调整：
     #   （一）从预训练权重开始训练：
     #       Adam：
@@ -77,8 +73,6 @@ if __name__ == "__main__":
     #       其中：UnFreeze_Epoch可以在100-300之间调整。
     #   （二）batch_size的设置：
     #       在显卡能够接受的范围内，以大为好。显存不足与数据集大小无关，提示显存不足（OOM或者CUDA out of memory）请调小batch_size。
-    #       受到BatchNorm层影响，batch_size最小为2，不能为1。
-    #       正常情况下Freeze_batch_size建议为Unfreeze_batch_size的1-2倍。不建议设置的差距过大，因为关系到学习率的自动调整。
     #----------------------------------------------------------------------------------------------------------------------------#
     #------------------------------------------------------#
     #   训练参数
@@ -88,7 +82,7 @@ if __name__ == "__main__":
     #------------------------------------------------------#
     Init_Epoch      = 0
     Epoch           = 100
-    batch_size      = 4
+    batch_size      = 2
 
     #------------------------------------------------------------------#
     #   其它训练参数：学习率、优化器、学习率下降有关
@@ -174,7 +168,7 @@ if __name__ == "__main__":
         model_body.load_weights(model_path, by_name=True, skip_mismatch=True)
 
     if ngpus_per_node > 1:
-        model   = multi_gpu_model(model_body, gpus=ngpus_per_node)
+        model   = ParallelModel(model_body, ngpus_per_node)
     else:
         model   = model_body
         
@@ -226,34 +220,16 @@ if __name__ == "__main__":
         }[optimizer_type]
 
         #---------------------------------------#
-        #   设置一下loss信息
-        #---------------------------------------#
-        model._losses = []
-        model._per_input_losses = {}
-        loss_names = ["rpn_class_loss",  "rpn_bbox_loss", "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
-        for name in loss_names:
-            layer = model.get_layer(name)
-            if layer.output in model.losses:
-                continue
-            loss = tf.reduce_mean(layer.output, keepdims=True) * config.LOSS_WEIGHTS.get(name, 1.)
-            model.add_loss(loss)
-
-        #---------------------------------------#
         #   进行编译
         #---------------------------------------#
-        model.compile(optimizer=optimizer, loss=[None] * len(model.outputs))
+        model.compile(optimizer=optimizer, loss={
+            'rpn_class_loss'    : lambda y_true, y_pred: y_pred,
+            'rpn_bbox_loss'     : lambda y_true, y_pred: y_pred,
+            'mrcnn_class_loss'  : lambda y_true, y_pred: y_pred,
+            'mrcnn_bbox_loss'   : lambda y_true, y_pred: y_pred,
+            'mrcnn_mask_loss'   : lambda y_true, y_pred: y_pred
+        })
 
-        #---------------------------------------#
-        #   用于显示训练情况
-        #---------------------------------------#
-        for name in loss_names:
-            if name in model.metrics_names:
-                continue
-            layer = model.get_layer(name)
-            model.metrics_names.append(name)
-            loss = tf.reduce_mean(layer.output, keepdims=True) * config.LOSS_WEIGHTS.get(name, 1.)
-            model.metrics_tensors.append(loss)
-            
         #---------------------------------------#
         #   获得学习率下降的公式
         #---------------------------------------#

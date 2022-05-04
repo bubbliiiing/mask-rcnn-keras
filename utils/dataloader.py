@@ -286,8 +286,8 @@ class COCODetection(Sequence):
             batch_gt_class_ids[i, :gt_class_ids.shape[0]]   = gt_class_ids
             batch_gt_boxes[i, :gt_boxes.shape[0]]           = gt_boxes
             batch_gt_masks[i, :, :, :gt_masks.shape[-1]]    = gt_masks
-        return [batch_images, batch_image_meta, batch_rpn_match, batch_rpn_bbox,
-                        batch_gt_class_ids, batch_gt_boxes, batch_gt_masks], []
+        return [batch_images, batch_image_meta, batch_rpn_match, batch_rpn_bbox, batch_gt_class_ids, batch_gt_boxes, batch_gt_masks], \
+               [np.zeros(self.batch_size), np.zeros(self.batch_size), np.zeros(self.batch_size), np.zeros(self.batch_size), np.zeros(self.batch_size)]
 
     def __len__(self):
         return math.ceil(len(self.ids) / float(self.batch_size))

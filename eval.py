@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 
 from PIL import Image
@@ -5,9 +6,9 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from tqdm import tqdm
 
+from mask_rcnn import MASK_RCNN
 from utils.utils import get_classes, get_coco_label_map
 from utils.utils_map import Make_json, prep_metrics
-from mask_rcnn import MASK_RCNN
 
 if __name__ == '__main__':
     #------------------------------------------------------------------------------------------------------------------#
@@ -42,6 +43,12 @@ if __name__ == '__main__':
     
     ids         = list(test_coco.imgToAnns.keys())
 
+    #------------------------------------#
+    #   创建文件夹
+    #------------------------------------#
+    if not osp.exists(map_out_path):
+        os.makedirs(map_out_path)
+        
     if map_mode == 0 or map_mode == 1:
         print("Load model.")
         yolact      = MASK_RCNN(confidence = 0.05, nms_iou = 0.5)

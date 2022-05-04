@@ -268,7 +268,9 @@ class MASK_RCNN(object):
             detections[0], mrcnn_mask[0], image_shape, image_data[0].shape, windows[0]
         )
 
-        outboxes            = np.zeros_like(box_thre)
-        outboxes[:, [0, 2]] = box_thre[:, [1, 3]]
-        outboxes[:, [1, 3]] = box_thre[:, [0, 2]]
+        outboxes = None
+        if box_thre is not None:
+            outboxes            = np.zeros_like(box_thre)
+            outboxes[:, [0, 2]] = box_thre[:, [1, 3]]
+            outboxes[:, [1, 3]] = box_thre[:, [0, 2]]
         return outboxes, class_thre, class_ids, masks_arg, masks_sigmoid
