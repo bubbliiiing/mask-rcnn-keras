@@ -35,8 +35,8 @@ keras==2.1.5
 
 ## 文件下载
 这个训练好的权重是基于coco数据集的，可以直接运行用于coco数据集的实例分割。  
-链接: https://pan.baidu.com/s/1MR9Bkukmd9ZqbBZKLCYZhg    
-提取码: h3md     
+链接: https://pan.baidu.com/s/1JXdNZ_dTCjtxjLmrxFWrag     
+提取码: mpzp     
 
 shapes数据集下载地址如下，该数据集是使用labelme标注的结果，尚未经过其它处理，用于区分三角形和正方形：  
 链接: https://pan.baidu.com/s/1hrCaEYbnSGBOhjoiOKQmig   
