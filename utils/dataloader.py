@@ -249,6 +249,18 @@ class COCODetection(Sequence):
             image, image_meta, gt_class_ids, gt_boxes, gt_masks = \
             load_image_gt(image, mask_gt, boxes, class_ids, image_id, self.config, use_mini_mask=self.config.USE_MINI_MASK)
 
+            #------------------------------#
+            #   初始化用于训练的内容
+            #------------------------------#
+            if i == 0:
+                batch_image_meta    = np.zeros((self.batch_size,) + image_meta.shape, dtype=image_meta.dtype)
+                batch_rpn_match     = np.zeros([self.batch_size, self.anchors.shape[0], 1], dtype=np.int32)
+                batch_rpn_bbox      = np.zeros([self.batch_size, self.config.RPN_TRAIN_ANCHORS_PER_IMAGE, 4], dtype=np.float32)
+                batch_images        = np.zeros((self.batch_size,) + image.shape, dtype=np.float32)
+                batch_gt_class_ids  = np.zeros((self.batch_size, self.config.MAX_GT_INSTANCES), dtype=np.int32)
+                batch_gt_boxes      = np.zeros((self.batch_size, self.config.MAX_GT_INSTANCES, 4), dtype=np.int32)
+                batch_gt_masks      = np.zeros((self.batch_size, gt_masks.shape[0], gt_masks.shape[1], self.config.MAX_GT_INSTANCES), dtype=gt_masks.dtype)
+
             if not np.any(gt_class_ids > 0):
                 continue
         
@@ -264,18 +276,6 @@ class COCODetection(Sequence):
                 gt_class_ids = gt_class_ids[ids]
                 gt_boxes = gt_boxes[ids]
                 gt_masks = gt_masks[:, :, ids]
-
-            #------------------------------#
-            #   初始化用于训练的内容
-            #------------------------------#
-            if i == 0:
-                batch_image_meta    = np.zeros((self.batch_size,) + image_meta.shape, dtype=image_meta.dtype)
-                batch_rpn_match     = np.zeros([self.batch_size, self.anchors.shape[0], 1], dtype=rpn_match.dtype)
-                batch_rpn_bbox      = np.zeros([self.batch_size, self.config.RPN_TRAIN_ANCHORS_PER_IMAGE, 4], dtype=rpn_bbox.dtype)
-                batch_images        = np.zeros((self.batch_size,) + image.shape, dtype=np.float32)
-                batch_gt_class_ids  = np.zeros((self.batch_size, self.config.MAX_GT_INSTANCES), dtype=np.int32)
-                batch_gt_boxes      = np.zeros((self.batch_size, self.config.MAX_GT_INSTANCES, 4), dtype=np.int32)
-                batch_gt_masks      = np.zeros((self.batch_size, gt_masks.shape[0], gt_masks.shape[1], self.config.MAX_GT_INSTANCES), dtype=gt_masks.dtype)
 
             #------------------------------#
             #   将当前信息加载进batch
