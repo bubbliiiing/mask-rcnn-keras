@@ -47,7 +47,7 @@ def load_image_gt(image, mask, boxes, class_ids, image_id, config, use_mini_mask
     #------------------------------#
     #   检漏，防止resize后目标消失
     #------------------------------#
-    _idx = np.sum(mask, axis=(0, 1)) > 0
+    _idx        = np.sum(mask, axis=(0, 1)) * (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0]) > 0
     mask        = mask[:, :, _idx]
     boxes       = boxes[_idx]
     class_ids   = class_ids[_idx]
