@@ -28,6 +28,7 @@ yolact-keras | https://github.com/bubbliiiing/yolact-keras
 yolact-pytorch | https://github.com/bubbliiiing/yolact-pytorch
 yolact-tf2 | https://github.com/bubbliiiing/yolact-tf2
 mask-rcnn-keras | https://github.com/bubbliiiing/mask-rcnn-keras
+mask-rcnn-tf2 | https://github.com/bubbliiiing/mask-rcnn-tf2
 
 ## 所需环境
 tensorflow-gpu==1.13.1  
