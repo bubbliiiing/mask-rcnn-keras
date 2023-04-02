@@ -441,12 +441,6 @@ def get_train_model(config):
     #   获得RPN网络的预测结果，进行格式调整，把五个特征层的结果进行堆叠
     #------------------------------------------------------------------#
     rpn_class_logits, rpn_class, rpn_bbox = [],[],[]
-    for p in rpn_feature_maps:
-        logits,classes,bbox = rpn([p])
-        rpn_class_logits.append(logits)
-        rpn_class.append(classes)
-        rpn_bbox.append(bbox)
-        
     #------------------------------------------------------------------#
     #   此时获得的rpn_class_logits、rpn_class、rpn_bbox的维度是
     #   rpn_class_logits    : Batch_size, num_anchors, 2
